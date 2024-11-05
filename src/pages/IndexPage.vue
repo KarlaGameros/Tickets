@@ -1,15 +1,15 @@
 <template>
   <q-page class="flex flex-center">
     <img
-      alt="Quasar logo"
-      src="~assets/quasar-logo-vertical.svg"
-      style="width: 200px; height: 200px"
-    >
+      alt="IEEN logo"
+      src="~assets/IEEN300.png"
+      style="width: 200px; height: 132px"
+    />
   </q-page>
 </template>
 
 <script setup>
 defineOptions({
-  name: 'IndexPage'
+  name: "IndexPage",
 });
 </script>
