@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { api } from "src/boot/axios";
+import { EncryptStorage } from "storage-encryption";
 
+const encryptStorage = new EncryptStorage("SECRET_KEY", "sessionStorage");
 export const useCategoriasStore = defineStore("useCategoriasStore", {
   state: () => ({
     modal: false,
@@ -11,7 +13,9 @@ export const useCategoriasStore = defineStore("useCategoriasStore", {
     list_Subcategorias: [],
     categoria: {
       id: null,
+      area: null,
       titulo: null,
+      area_Id: null,
       descripcion: null,
     },
     subcategoria: {
@@ -41,7 +45,9 @@ export const useCategoriasStore = defineStore("useCategoriasStore", {
 
     initCategoria() {
       this.categoria.id = null;
+      this.categoria.area = null;
       this.categoria.titulo = null;
+      this.categoria.area_Id = null;
       this.categoria.descripcion = null;
     },
 
@@ -60,15 +66,27 @@ export const useCategoriasStore = defineStore("useCategoriasStore", {
           const { success, data } = resp.data;
           if (success == true) {
             if (data) {
-              this.list_Categorias = data.map((categoria) => {
+              let list = data.map((categoria) => {
                 return {
                   id: categoria.id,
                   value: categoria.id,
+                  area: categoria.area,
                   label: categoria.titulo,
                   titulo: categoria.titulo,
+                  area_Id: categoria.area_Id,
                   descripcion: categoria.descripcion,
                 };
               });
+              if (
+                encryptStorage.decrypt("perfil") == "Super Administrador" ||
+                encryptStorage.decrypt("perfil") == "Administrador"
+              ) {
+                this.list_Categorias = list;
+              } else {
+                this.list_Categorias = list.filter(
+                  (x) => x.area_Id == encryptStorage.decrypt("area_Id")
+                );
+              }
             }
           }
         } else {
@@ -120,7 +138,9 @@ export const useCategoriasStore = defineStore("useCategoriasStore", {
           const { success, data } = resp.data;
           if (success === true) {
             this.categoria.id = data.id;
+            this.categoria.area = data.area;
             this.categoria.titulo = data.titulo;
+            this.categoria.area_Id = data.area_Id;
             this.categoria.descripcion = data.descripcion;
           } else {
             return { success, data };

@@ -3,7 +3,7 @@
     <div class="col-12">
       <q-table
         :grid="$q.screen.xs"
-        :rows="list_Seguimiento_Ticket"
+        :rows="list"
         :columns="columns"
         :filter="filter"
         :pagination="pagination"
@@ -87,7 +87,10 @@
                   <q-tooltip>Ver solicitud</q-tooltip>
                 </q-btn>
                 <q-btn
-                  v-if="props.row.fecha_Fin_Seguimiento == null"
+                  v-if="
+                    props.row.fecha_Fin_Seguimiento == null &&
+                    !props.row.lectura
+                  "
                   flat
                   round
                   color="purple-ieen"
@@ -96,6 +99,13 @@
                 >
                   <q-tooltip>Concluir seguimiento</q-tooltip>
                 </q-btn>
+              </div>
+              <div v-else-if="col.name == 'lectura'">
+                <q-icon
+                  :name="col.value ? 'check_circle' : 'cancel'"
+                  :color="col.value ? 'green' : 'red'"
+                  size="sm"
+                />
               </div>
               <label
                 v-else-if="col.name == 'folio_Solicitud_Ticket'"
@@ -129,21 +139,25 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
-import { onBeforeMount, ref } from "vue";
+import { useConCopiaStore } from "src/stores/con-copia-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
+import { onBeforeMount, ref, watch } from "vue";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import Swal from "sweetalert2";
 
 //---------------------------------------------------------------
 
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const evidenciasStore = useEvidenciasStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
-const { list_Seguimiento_Ticket, concluirSeguimiento } =
-  storeToRefs(ticketsStore);
+const misSolicitudesStore = useMisSolicitudesStore();
+const conCopiaStore = useConCopiaStore();
+const { list_Con_Copia_By_Empleado } = storeToRefs(conCopiaStore);
+const { list_Seguimiento_Solicitud, modal_Detalle_Seguimiento_Solicitudes } =
+  storeToRefs(ticketsSolicitudesStore);
+const list = ref([]);
 
 //---------------------------------------------------------------
 
@@ -151,22 +165,32 @@ onBeforeMount(() => {
   cargarData();
 });
 
+watch(modal_Detalle_Seguimiento_Solicitudes, (val) => {
+  if (val == false) {
+    cargarData();
+  }
+});
+
 //---------------------------------------------------------------
 
 const cargarData = async () => {
-  await ticketsStore.load_Seguimiento_Ticket();
+  await conCopiaStore.load_Con_Copia_By_Empleado();
+  await ticketsSolicitudesStore.load_Seguimiento_Ticket();
+  list.value = list_Seguimiento_Solicitud.value.concat(
+    list_Con_Copia_By_Empleado.value
+  );
 };
 
 const verSolicitud = async (row) => {
   loading();
-  ticketsStore.actualizarVisualizar(false);
-  ticketsStore.actualizarModalSeguimiento(true);
-  await ticketsStore.get_Seguimiento_By_Id(row.id);
-  await ticketsStore.load_Seguimiento_By_Ticket(row.solicitud_Ticket_Id);
-  await evidenciasStore.load_Evidencias_By_Ticket(row.solicitud_Ticket_Id);
-  await solicitudesTicketStore.load_Solicitud_By_Ticket(
+  ticketsSolicitudesStore.actualizarVisualizar(row.lectura);
+  ticketsSolicitudesStore.actualizarModalSeguimientoSolicitudes(true);
+  //await ticketsSolicitudesStore.get_Seguimiento_By_Id(row.id);
+  await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(
     row.solicitud_Ticket_Id
   );
+  await evidenciasStore.load_Evidencias_By_Ticket(row.solicitud_Ticket_Id);
+  await misSolicitudesStore.load_Solicitud_By_Id(row.solicitud_Ticket_Id);
   $q.loading.hide();
 };
 
@@ -191,9 +215,9 @@ const concluir = async (row) => {
       title: "Concluir seguimiento",
     }).then(async (result) => {
       if (result.isConfirmed) {
-        let resp = await ticketsStore.concluir_Seguimiento(row.id);
+        let resp = await ticketsSolicitudesStore.concluir_Seguimiento(row.id);
         if (resp.success) {
-          ticketsStore.load_Seguimiento_Ticket();
+          cargarData();
           alertNotify("top-right", "positive", resp.data);
         } else {
           alertNotify("top-right", "negative", resp.data);
@@ -237,6 +261,12 @@ const columns = [
     align: "center",
   },
   {
+    name: "lectura",
+    label: "Solo lectura",
+    field: "lectura",
+    align: "center",
+  },
+  {
     name: "folio_Solicitud_Ticket",
     label: "Folio",
     field: "folio_Solicitud_Ticket",
@@ -251,7 +281,7 @@ const columns = [
   },
   {
     name: "empleado_Seguimiento",
-    label: "Personal",
+    label: "Personal responsable",
     field: "empleado_Seguimiento",
     align: "center",
   },

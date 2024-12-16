@@ -14,38 +14,29 @@ import { storeToRefs } from "pinia";
 import { useTableroStore } from "src/stores/tablero-store";
 import { onBeforeMount, ref, watch } from "vue";
 
+//---------------------------------------------------------------
+
 const tableroStore = useTableroStore();
-const { list_Tickets_By_Area } = storeToRefs(tableroStore);
+const { list_Solicitudes_Trimestral } = storeToRefs(tableroStore);
 const colors = ["#539fa2", "#72b1a4", "#abccb1", "#c4dbb4", "#d4e2b6"];
-const categories = ref([]);
+const series = ref([
+  {
+    data: [],
+  },
+]);
+
+//---------------------------------------------------------------
 
 onBeforeMount(() => {
   cargarData();
 });
 
-const cargarData = async () => {
-  // for (let index = 0; index < list_Tickets_By_Area.value.length; index++) {
-  //   const element = list_Tickets_By_Area.value[index];
-  //   if (!categories.value.includes(element.area)) {
-  //     categories.value.push(element.area);
-  //   }
-  // }
-};
+//---------------------------------------------------------------
 
-const series = [
-  {
-    data: [21, 22, 10, 28],
-  },
-];
-const chartOptions = {
+const chartOptions = ref({
   chart: {
     height: 350,
     type: "bar",
-    events: {
-      click: function (chart, w, e) {
-        // console.log(chart, w, e)
-      },
-    },
   },
   colors: colors,
   plotOptions: {
@@ -61,7 +52,7 @@ const chartOptions = {
     show: false,
   },
   xaxis: {
-    categories: ["John", "Joe", "Jake", "Amber"],
+    categories: ["Trimestre 1", "Trimestre 2", "Trimestre 3", "Trimestre 4"],
     labels: {
       style: {
         colors: colors,
@@ -69,5 +60,23 @@ const chartOptions = {
       },
     },
   },
+});
+
+const cargarData = () => {
+  series.value = [
+    {
+      data: list_Solicitudes_Trimestral.value.map((item) => item.solicitudes),
+    },
+  ];
 };
+
+watch(
+  () => list_Solicitudes_Trimestral.value,
+  (val) => {
+    if (val.length) {
+      cargarData();
+    }
+  },
+  { immediate: true }
+);
 </script>

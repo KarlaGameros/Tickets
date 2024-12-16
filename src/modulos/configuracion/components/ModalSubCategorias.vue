@@ -29,18 +29,15 @@
       <q-card-section>
         <q-form @submit="onSubmit">
           <div class="row q-col-gutter-sm">
+            <div class="col-12">
+              <q-input readonly label="Área" v-model="categoria.area" />
+            </div>
             <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
-              <q-input
-                readonly
-                color="purple-ieen"
-                label="Título"
-                v-model="categoria.titulo"
-              />
+              <q-input readonly label="Título" v-model="categoria.titulo" />
             </div>
             <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 q-pb-lg">
               <q-input
                 readonly
-                color="purple-ieen"
                 label="Descripción"
                 v-model="categoria.descripcion"
               />

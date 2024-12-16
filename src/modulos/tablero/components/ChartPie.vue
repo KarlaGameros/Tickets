@@ -11,33 +11,40 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
-import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { onBeforeMount, ref } from "vue";
+import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
 
-const ticketsStore = useTicketsStore();
+//---------------------------------------------------------------
+
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const tiposSolictudesStore = useTiposSolicitudesStore();
-const { list_Solicitudes_Tickets } = storeToRefs(ticketsStore);
+const { list_Solicitudes_Tickets } = storeToRefs(ticketsSolicitudesStore);
 const { list_Tipos_Solicitudes } = storeToRefs(tiposSolictudesStore);
-
 const series = ref([]);
 const labels = ref([]);
 const colors = ["#539fa2", "#abccb1", "#c4dbb4", "#d4e2b6"];
+
+//---------------------------------------------------------------
 
 onBeforeMount(() => {
   cargarData();
 });
 
+//---------------------------------------------------------------
+
 const cargarData = async () => {
-  await ticketsStore.load_Solicitudes_Tickets();
+  await ticketsSolicitudesStore.load_Solicitudes_Tickets();
   await tiposSolictudesStore.load_Tipos_Solicitudes();
   list_Tipos_Solicitudes.value.forEach((element) => {
-    series.value.push(
-      list_Solicitudes_Tickets.value.filter(
-        (x) => x.tipo_Solicitud == element.label
-      ).length
-    );
-    labels.value.push(element.nombre);
+    if (element.nombre != "Solicitudes") {
+      series.value.push(
+        list_Solicitudes_Tickets.value.filter(
+          (x) => x.tipo_Solicitud == element.label
+        ).length
+      );
+      labels.value.push(element.nombre);
+    }
   });
 };
 

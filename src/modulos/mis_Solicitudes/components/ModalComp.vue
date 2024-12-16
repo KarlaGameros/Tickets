@@ -1,6 +1,6 @@
 <template>
   <q-dialog
-    v-model="modal"
+    v-model="modal_Solicitudes"
     persistent
     transition-show="jump-right"
     transition-hide="jump-left"
@@ -16,10 +16,10 @@
         >
           {{
             is_Editar
-              ? "EDITAR TICKET"
+              ? "EDITAR SOLICITUD"
               : is_Visualizar
-              ? "VER TICKET"
-              : "CREAR TICKET"
+              ? "VER SOLICITUD"
+              : "CREAR SOLICITUD"
           }}
           <br />
           <p
@@ -80,39 +80,72 @@
                 </template>
               </q-select>
             </div>
-            <div
-              v-if="solicitud.id == null"
-              class="col-lg-6 col-md-6 col-sm-6 col-xs-12"
-            >
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <q-input
+                :readonly="perfil_Personal"
                 color="purple-ieen"
                 label="Fecha"
                 hint="Fecha de la solicitud"
-                readonly
                 v-model="currentDate"
               >
                 <template v-slot:prepend>
-                  <q-icon name="calendar_today" color="purple-ieen" />
+                  <q-icon name="calendar_today" color="purple-ieen">
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-date
+                        :disable="!area_Informatica"
+                        color="purple-ieen"
+                        v-model="currentDate"
+                      >
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="purple-ieen"
+                            flat
+                          />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
                 </template>
-              </q-input>
-            </div>
-            <div v-else class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
-              <q-input
-                color="purple-ieen"
-                label="Fecha"
-                hint="Fecha de la solicitud"
-                readonly
-                v-model="solicitud.fecha_Creacion"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="calendar_today" color="purple-ieen" />
+                <template v-slot:append v-if="area_Informatica">
+                  <q-icon
+                    color="purple-ieen"
+                    name="access_time"
+                    class="cursor-pointer"
+                  >
+                    <q-popup-proxy
+                      cover
+                      transition-show="scale"
+                      transition-hide="scale"
+                    >
+                      <q-time
+                        color="purple-ieen"
+                        v-model="currentDate"
+                        mask="YYYY-MM-DD HH:mm"
+                        format24h
+                      >
+                        <div class="row items-center justify-end">
+                          <q-btn
+                            v-close-popup
+                            label="Close"
+                            color="purple-ieen"
+                            flat
+                          />
+                        </div>
+                      </q-time>
+                    </q-popup-proxy>
+                  </q-icon>
                 </template>
               </q-input>
             </div>
             <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <q-select
                 :readonly="is_Visualizar || perfil_Personal"
-                stack-label
                 color="purple-ieen"
                 v-model="personal_Id"
                 :options="list_Personal_By_Area"
@@ -135,18 +168,30 @@
                 v-model="puesto"
               />
             </div>
-            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+            <div
+              :class="
+                !perfil_Personal
+                  ? 'col-lg-6 col-md-6 col-sm-6 col-xs-12'
+                  : 'col-12'
+              "
+            >
               <q-select
                 :readonly="is_Visualizar"
-                stack-label
+                v-model="area_Solicitud_Id"
+                :options="list_Areas"
+                label="Área para atender la solicitud"
+                hint="Seleccione un área"
+                lazy-rules
+                :rules="[(val) => !!val || 'El área es requerida']"
                 color="purple-ieen"
-                v-model="inventario_Id"
-                :options="list_Inventario_By_Personal"
-                label="Inventario con falla"
-                hint="Seleccione inventario en caso de tener falla en equipo"
               >
                 <template v-slot:prepend>
-                  <q-icon color="purple-ieen" name="inventory_2" />
+                  <q-icon color="purple-ieen" name="apartment" />
+                </template>
+                <template v-slot:after>
+                  <q-icon name="help" flat color="grey">
+                    <q-tooltip>Área que atenderá la solicitud</q-tooltip>
+                  </q-icon>
                 </template>
               </q-select>
             </div>
@@ -156,7 +201,6 @@
             >
               <q-select
                 :readonly="is_Visualizar || perfil_Personal"
-                stack-label
                 color="purple-ieen"
                 v-model="recepcion_Id"
                 :options="list_Recepcion"
@@ -191,9 +235,11 @@
             >
               <q-file
                 bottom-slots
-                label="Evidencia"
+                label="Cargar anexos"
                 v-model="evidencia"
                 color="purple-ieen"
+                max-file-size="10485760"
+                @rejected="onRejected"
               >
                 <template v-slot:prepend>
                   <q-icon
@@ -221,9 +267,12 @@
                 v-model="descripcion_Evidencia"
               />
             </div>
-            <div v-if="!is_Visualizar" class="col-12 text-right q-pb-xs">
+            <div
+              v-if="!is_Visualizar && evidencia != null"
+              class="col-12 text-right q-pb-xs"
+            >
               <q-btn
-                label="Agregar"
+                label="Agregar evidencias"
                 size="sm"
                 icon-right="add"
                 color="secondary"
@@ -235,7 +284,6 @@
                 :rows="list_Evidencias_Ticket"
                 :columns="columns"
                 row-key="name"
-                hide-bottom
               >
                 <template v-slot:body="props">
                   <q-tr :props="props">
@@ -300,14 +348,14 @@
 </template>
 
 <script setup>
+import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "src/stores/auth_store";
+import { useAuthStore } from "src/stores/auth-store";
 import { EncryptStorage } from "storage-encryption";
 import { useHerlpersStore } from "src/stores/helpers-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
-import { useInventarioStore } from "src/stores/inventario-store";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
-import { onBeforeMount, ref, watch } from "vue";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
+import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
 import { useQuasar, QSpinnerFacebook, date } from "quasar";
 
 //---------------------------------------------------------------
@@ -316,43 +364,44 @@ const $q = useQuasar();
 const authStore = useAuthStore();
 const helpersStore = useHerlpersStore();
 const evidenciasStore = useEvidenciasStore();
-const inventarioStore = useInventarioStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
+const tiposSolicitudesStore = useTiposSolicitudesStore();
+const misSolicitudesStore = useMisSolicitudesStore();
 const encryptStorage = new EncryptStorage("SECRET_KEY", "sessionStorage");
 const { usuario } = storeToRefs(authStore);
-const { inventario_Ticket } = storeToRefs(inventarioStore);
+const { list_Tipos_Solicitudes } = storeToRefs(tiposSolicitudesStore);
+const { modal_Solicitudes, solicitud, is_Visualizar, is_Editar } =
+  storeToRefs(misSolicitudesStore);
 const { list_Evidencias_Ticket } = storeToRefs(evidenciasStore);
-const { list_Areas, list_Personal_By_Area, list_Inventario_By_Personal } =
-  storeToRefs(helpersStore);
-const { solicitud, modal, is_Editar, is_Visualizar, inventario } = storeToRefs(
-  solicitudesTicketStore
-);
+const { list_Areas, list_Personal_By_Area } = storeToRefs(helpersStore);
 const puesto = ref(null);
 const area_Id = ref(null);
+const evidencia = ref(null);
 const list_Recepcion = ref([
   "Correo electrónico",
   "Teléfono",
   "Sistema",
   "Oficio",
 ]);
-const timeStamp = Date.now();
-const currentDate = ref(date.formatDate(timeStamp, "YYYY-MM-DD HH:mm:ss"));
-const evidencia = ref(null);
 const personal_Id = ref(null);
 const recepcion_Id = ref(null);
-const inventario_Id = ref({ value: 0, label: "Ninguno" });
+const area_Solicitud_Id = ref(null);
 const descripcion_Evidencia = ref(null);
+const inventario_Id = ref({ value: 0, label: "Ninguno" });
 const perfil_Personal = ref(
   encryptStorage.decrypt("perfil") == "Personal" ? true : false
+);
+const timeStamp = Date.now();
+const currentDate = ref(date.formatDate(timeStamp, "YYYY-MM-DD HH:mm:ss"));
+const area_Informatica = ref(
+  encryptStorage.decrypt("area") ==
+    "Unidad Técnica de Informática y Estadística"
+    ? true
+    : false
 );
 
 //---------------------------------------------------------------
 
-onBeforeMount(() => {});
-
-//---------------------------------------------------------------
-
-watch(modal, (val) => {
+watch(modal_Solicitudes, (val) => {
   if (val == true) {
     cargarData();
   }
@@ -362,6 +411,9 @@ watch(solicitud.value, (val) => {
   if (val.id != null) {
     cargarArea(val);
     recepcion_Id.value = val.tipo_Recepcion;
+    if (val.fecha_Creacion != null) {
+      currentDate.value = val.fecha_Creacion;
+    }
   }
 });
 
@@ -376,7 +428,6 @@ watch(area_Id, (val) => {
 watch(personal_Id, (val) => {
   if (val != null) {
     puesto.value = val.puesto;
-    cargarInventarioByPersonal(val);
   }
 });
 
@@ -386,6 +437,7 @@ const cargarData = async () => {
   loading();
   await helpersStore.load_Areas();
   await authStore.get_Empleado_By_Usuario();
+  await tiposSolicitudesStore.load_Tipos_Solicitudes();
   if (perfil_Personal.value) {
     cargarArea(usuario.value);
   }
@@ -398,20 +450,20 @@ const cargarPersonal = async (id) => {
   $q.loading.hide();
 };
 
-const cargarInventarioByPersonal = async (val) => {
-  loading();
-  await helpersStore.load_Inventario_By_Personal(val.value);
-  $q.loading.hide();
-};
-
 const cargarArea = async (val) => {
+  await helpersStore.load_Areas();
   if (area_Id.value == null) {
-    await helpersStore.load_Areas();
     let areaFiltrado = list_Areas.value.find(
       (x) => x.value == val.solicitante_Area_Id
     );
     area_Id.value = areaFiltrado;
     cargarSolicitante(val);
+  }
+  if (area_Solicitud_Id.value == null) {
+    let areaFiltrado = list_Areas.value.find(
+      (x) => x.value == val.area_Solicitud_Id
+    );
+    area_Solicitud_Id.value = areaFiltrado;
   }
 };
 
@@ -422,19 +474,6 @@ const cargarSolicitante = async (val) => {
       (x) => x.value == val.solicitante_Id
     );
     personal_Id.value = personalFiltrado;
-    cargarInventarioFalla();
-  }
-};
-
-const cargarInventarioFalla = async () => {
-  await helpersStore.load_Inventario_By_Personal(personal_Id.value.value);
-  if (inventario_Ticket.value.id != null) {
-    if (inventario_Id.value.value == 0) {
-      let inventarioFiltrado = list_Inventario_By_Personal.value.find(
-        (x) => x.id == inventario_Ticket.value.inventario_Id
-      );
-      inventario_Id.value = inventarioFiltrado;
-    }
   }
 };
 
@@ -463,7 +502,12 @@ const agregarEvidencia = async () => {
       let evidenciaFormData = new FormData();
       evidenciaFormData.append("Solicitud_Ticket_Id", solicitud.value.id);
       evidenciaFormData.append("Tipo", "Ticket");
-      evidenciaFormData.append("Descripcion", descripcion_Evidencia.value);
+      evidenciaFormData.append(
+        "Descripcion",
+        descripcion_Evidencia.value == null
+          ? "Sin descripción"
+          : descripcion_Evidencia.value
+      );
       evidenciaFormData.append("Evidencia", evidencia.value);
       resp = await evidenciasStore.create_Evidencia_Ticket(evidenciaFormData);
     } else {
@@ -554,25 +598,33 @@ const alertNotify = (position, type, resp) => {
 const limpiar = () => {
   puesto.value = null;
   area_Id.value = null;
+  evidencia.value = null;
   personal_Id.value = null;
   recepcion_Id.value = null;
+  area_Solicitud_Id.value = null;
   list_Evidencias_Ticket.value = [];
-  solicitudesTicketStore.initSolicitudTicket();
-  inventario_Id.value = { value: 0, label: "Ninguno" };
+  misSolicitudesStore.initSolicitud();
+  currentDate.value = date.formatDate(timeStamp, "YYYY/MM/DD HH:mm:ss");
 };
 
 const actualizarModal = (valor) => {
+  misSolicitudesStore.updateIsEdit(valor);
+  misSolicitudesStore.updateIsVisualize(valor);
+  misSolicitudesStore.updateModalSolicitudes(valor);
   limpiar();
-  inventarioStore.initInventarioTicket();
-  solicitudesTicketStore.updateModal(valor);
-  solicitudesTicketStore.updateIsEdit(valor);
-  solicitudesTicketStore.updateIsVisualize(valor);
+};
+
+const onRejected = (rejectedEntries) => {
+  // $q.notify({
+  //   type: "negative",
+  //   message: `${rejectedEntries.length} file(s) did not pass validation constraints`,
+  // });
+  misSolicitudesStore.actualizarModalNota(true);
 };
 
 const onSubmit = async () => {
   loading();
   let resp = null;
-  let currentDate = Date.now();
 
   let solictudFormData = new FormData();
   solictudFormData.append(
@@ -581,22 +633,24 @@ const onSubmit = async () => {
   );
   solictudFormData.append("Solicitante_Id", personal_Id.value.value);
   solictudFormData.append("Descripcion", solicitud.value.descripcion);
+  solictudFormData.append("Area_Solicitud_Id", area_Solicitud_Id.value.value);
+  solictudFormData.append(
+    "Tipo_Solicitud_Id",
+    list_Tipos_Solicitudes.value.find((x) => x.label == "Solicitudes").value
+  );
+  solictudFormData.append(
+    "Fecha_Creacion",
+    date.formatDate(currentDate.value, "YYYY-MM-DD HH:mm:ss")
+  );
   if (inventario_Id.value.value != 0)
     solictudFormData.append("Inventario_Id", inventario_Id.value.value);
-
   if (is_Editar.value) {
-    resp = await solicitudesTicketStore.update_Solicitud_Ticket(
+    resp = await misSolicitudesStore.update_Solicitud_Ticket(
       solicitud.value.id,
       solictudFormData
     );
   } else {
-    solicitud.value.fecha_Creacion = date.formatDate(
-      currentDate,
-      "YYYY-MM-DD HH:mm:ss"
-    );
-    resp = await solicitudesTicketStore.create_Solicitud_Ticket(
-      solictudFormData
-    );
+    resp = await misSolicitudesStore.create_Solicitud_Ticket(solictudFormData);
   }
   if (resp.success) {
     if (resp.id != null && list_Evidencias_Ticket.value.length > 0) {
@@ -604,41 +658,23 @@ const onSubmit = async () => {
         let evidenciaFormData = new FormData();
         evidenciaFormData.append("Solicitud_Ticket_Id", resp.id);
         evidenciaFormData.append("Tipo", "Ticket");
-        evidenciaFormData.append("Descripcion", element.descripcion);
+        evidenciaFormData.append(
+          "Descripcion",
+          element.descripcion == null ? "Sin descripción" : element.descripcion
+        );
         evidenciaFormData.append("Evidencia", element.evidencia);
         let respEvidencia = await evidenciasStore.create_Evidencia_Ticket(
           evidenciaFormData
         );
       });
     }
-    if (inventario_Id.value.value != 0) {
-      inventario_Ticket.value.solicitud_Ticket_Id = is_Editar.value
-        ? solicitud.value.id
-        : resp.id;
-      inventario_Ticket.value.descripcion = solicitud.value.descripcion;
-      if (inventario_Ticket.value.id != null) {
-        if (
-          inventario_Ticket.value.inventario_Id != inventario_Id.value.value
-        ) {
-          inventario_Ticket.value.inventario_Id = inventario_Id.value.value;
-          let respInventario = await inventarioStore.update_Inventario_Falla(
-            inventario_Ticket.value
-          );
-        }
-      } else {
-        // inventario_Ticket.value.inventario_Id = inventario_Id.value.value;
-        // let respInventario = await inventarioStore.create_Inventario_Falla(
-        //   inventario_Ticket.value
-        // );
-      }
-    }
 
     if (resp.success) {
-      await solicitudesTicketStore.load_Mis_Solicitudes_Tickets();
       alertNotify("top-right", "positive", resp.data);
     } else {
       alertNotify("center", "warning", resp.data);
     }
+    await misSolicitudesStore.load_Mis_Solicitudes();
     actualizarModal(false);
     $q.loading.hide();
   } else {

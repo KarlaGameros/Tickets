@@ -139,7 +139,7 @@
                         dense
                         round
                         icon="visibility"
-                        @click="verEvidencia(evidencia.evidencia_URL)"
+                        @click="verEvidencia(evidencia)"
                       />
                     </q-item-section>
                   </q-item>
@@ -147,7 +147,6 @@
               </div>
             </div>
           </q-step>
-
           <q-step :name="2" title="Responsable" icon="supervisor_account">
             <div class="row q-col-gutter-sm">
               <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -250,6 +249,16 @@
                         >
                           <q-tooltip>Agregar actividades</q-tooltip>
                         </q-btn>
+                        <q-btn
+                          v-if="props.row.observaciones == null"
+                          flat
+                          round
+                          color="purple-ieen"
+                          icon="delete"
+                          @click="eliminarDetalle(props.row)"
+                        >
+                          <q-tooltip>Eliminar seguimiento</q-tooltip>
+                        </q-btn>
                       </div>
                       <div v-else-if="col.name === 'estatus'">
                         <q-badge
@@ -336,28 +345,28 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "src/stores/auth_store";
-import { useTicketsStore } from "src/stores/tickets-store";
+import { useAuthStore } from "src/stores/auth-store";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useHerlpersStore } from "src/stores/helpers-store";
 import { useCategoriasStore } from "src/stores/categorias-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import { onBeforeMount, ref, watch } from "vue";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 
 //-----------------------------------------------------------
 
 const $q = useQuasar();
 const authStore = useAuthStore();
-const ticketsStore = useTicketsStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const helpersStore = useHerlpersStore();
 const evidenciasStore = useEvidenciasStore();
 const categoriasStore = useCategoriasStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
+const misSolicitudesStore = useMisSolicitudesStore();
 const { seguimiento, modal_Seguimiento, list_Seguimiento_By_Ticket } =
-  storeToRefs(ticketsStore);
+  storeToRefs(ticketsSolicitudesStore);
 const { usuario } = storeToRefs(authStore);
-const { solicitud } = storeToRefs(solicitudesTicketStore);
+const { solicitud } = storeToRefs(misSolicitudesStore);
 const { list_Evidencias_Ticket } = storeToRefs(evidenciasStore);
 const { list_Areas, list_Personal_By_Area } = storeToRefs(helpersStore);
 const { list_Categorias, list_Subcategorias } = storeToRefs(categoriasStore);
@@ -443,15 +452,12 @@ const cargarCategoria = async (val) => {
   }
 };
 
-const verEvidencia = (url) => {
+const verEvidencia = (evidencia) => {
   $q.dialog({
-    title: "Ver",
-    style: "width: 800px; max-width: 65vw;",
-    message: `<iframe
-            src="${url}"
-            width="100%"
-            height="550"
-          ></iframe>`,
+    title: "<p style='text-align: center; color: #673e84'>Ver evidencia</p>",
+    style: "width: 800px; max-width: 65vw",
+    message: `<strong>Descripción: ${evidencia.descripcion}</strong>
+    <iframe src="${evidencia.evidencia_URL}" width="100%" height="550"></iframe>`,
     html: true,
     ok: "Cerrar",
   });
@@ -477,18 +483,52 @@ const verDetalle = async (row) => {
     row.estatus == "Concluido" ||
     row.empleado_Seguimiento_Id != usuario.value.id
   ) {
-    ticketsStore.actualizarVisualizar(true);
+    ticketsSolicitudesStore.actualizarVisualizar(true);
   } else {
-    ticketsStore.actualizarModal(false);
+    ticketsSolicitudesStore.actualizarModal(false);
   }
   await evidenciasStore.load_Evidencias_Seguimiento_By_Ticket(row.id);
-  await ticketsStore.get_Seguimiento_By_Id(row.id);
-  ticketsStore.actualizarModalDetalleSeguimiento(true);
+  await ticketsSolicitudesStore.get_Seguimiento_By_Id(row.id);
+  ticketsSolicitudesStore.actualizarModalDetalleSeguimiento(true);
+};
+
+const eliminarDetalle = async (row) => {
+  $q.dialog({
+    title: "¿Está seguro de eliminar el seguimiento?",
+    message: "Se eliminará el seguimiento del ticket",
+    icon: "Warning",
+    persistent: true,
+    transitionShow: "scale",
+    transitionHide: "scale",
+    ok: {
+      icon: "delete",
+      color: "secondary",
+      label: "Sí! eliminar",
+    },
+    cancel: {
+      icon: "close",
+      color: "red",
+      label: "Cancelar",
+    },
+  }).onOk(async () => {
+    loading();
+    const resp = await ticketsSolicitudesStore.delete_Seguimiento(row.id);
+    if (resp.success) {
+      await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(
+        row.solicitud_Ticket_Id
+      );
+      alertNotify("top-right", "positive", resp.data);
+      $q.loading.hide();
+    } else {
+      $q.loading.hide();
+      alertNotify("top-right", "negative", resp.data);
+    }
+  });
 };
 
 const actualizarModal = (valor) => {
   limpiar();
-  ticketsStore.actualizarModalSeguimiento(valor);
+  ticketsSolicitudesStore.actualizarModalSeguimiento(valor);
 };
 
 const limpiar = () => {
@@ -499,10 +539,11 @@ const limpiar = () => {
   categoria_Id.value = null;
   subcategoria_Id.value = null;
   puesto_Responsable.value = null;
+  actividades_Seguimiento.value = null;
   personal_Responsable_Id.value = null;
   personal_Seguimiento_Id.value = null;
-  ticketsStore.initSeguimiento();
-  solicitudesTicketStore.initSolicitudTicket();
+  ticketsSolicitudesStore.initSeguimiento();
+  misSolicitudesStore.initSolicitud();
 };
 
 const loading = () => {
@@ -550,10 +591,13 @@ const guardarSeguimiento = async () => {
     seguimiento.value.tipo = "Seguimiento secundario";
     seguimiento.value.empleado_Seguimiento_Id =
       personal_Seguimiento_Id.value.value;
-    resp = await ticketsStore.create_Seguimiento(seguimiento.value);
+    seguimiento.value.solicitud_Ticket_Id = solicitud.value.id;
+    resp = await ticketsSolicitudesStore.create_Seguimiento(seguimiento.value);
     if (resp.success) {
-      await ticketsStore.load_Seguimiento_By_Ticket(solicitud.value.id);
-      await ticketsStore.get_Seguimiento_By_Id(seguimiento.value.id);
+      await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(
+        solicitud.value.id
+      );
+      await ticketsSolicitudesStore.get_Seguimiento_By_Id(seguimiento.value.id);
       actualizarModal(false);
       alertNotify("top-right", "positive", resp.data);
     } else {

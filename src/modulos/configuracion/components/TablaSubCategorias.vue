@@ -141,29 +141,33 @@ const alertNotify = (position, type, resp) => {
 };
 
 const eliminarSubCategoria = async (row) => {
-  Swal.fire({
+  $q.dialog({
     title: "Eliminar subcategoria",
-    text: "¿Está seguro de eliminar la subcategoria?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Si, eliminar",
-    cancelButtonText: "No, regresar",
-    reverseButtons: true,
-    confirmButtonColor: "#26a69a",
-    cancelButtonColor: "#f44336",
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      loading();
-      const resp = await categoriasStore.delete_SubCategoria(row.id);
-      if (resp.success) {
-        $q.loading.hide();
-        await categoriasStore.load_Subcategorias(row.categoria_Id);
-        alertNotify("top-right", "positive", resp.data);
-      } else {
-        $q.loading.hide();
-        alertNotify("top-right", "negative", resp.data);
-      }
+    message: "¿Está seguro de eliminar la subcategoria?",
+    icon: "Warning",
+    persistent: true,
+    transitionShow: "scale",
+    transitionHide: "scale",
+    ok: {
+      color: "secondary",
+      label: "Si, Eliminar",
+    },
+    cancel: {
+      color: "red",
+      label: "No, Regresar",
+    },
+  }).onOk(async () => {
+    loading();
+    const resp = await categoriasStore.delete_SubCategoria(row.id);
+    if (resp.success) {
+      $q.loading.hide();
+      await categoriasStore.load_Subcategorias(row.categoria_Id);
+      alertNotify("top-right", "positive", resp.data);
+    } else {
+      $q.loading.hide();
+      alertNotify("top-right", "negative", resp.data);
     }
+    $q.loading.hide();
   });
 };
 

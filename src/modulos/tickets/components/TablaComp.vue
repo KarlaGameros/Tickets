@@ -25,8 +25,8 @@
       >
         <template v-slot:top-left>
           <q-select
+            v-if="props.tipo == 'en_Proceso'"
             style="width: 250px"
-            dense
             color="purple-ieen"
             v-model="tipo_Solicitud"
             :options="list_Tipos_Solicitudes"
@@ -35,7 +35,6 @@
           />
           <q-select
             style="width: 250px"
-            dense
             color="purple-ieen"
             v-model="area_Id"
             :options="list_Areas"
@@ -119,7 +118,9 @@
                   <q-tooltip>Ver solicitud</q-tooltip>
                 </q-btn>
                 <q-btn
-                  v-if="tipo == 'en_Proceso'"
+                  v-if="
+                    tipo == 'en_Proceso' && !props.row.seguimientos_Pendientes
+                  "
                   flat
                   round
                   color="purple-ieen"
@@ -146,17 +147,42 @@
                   icon="attach_file"
                   @click="subirArchivoFirmado(props.row)"
                 >
-                  <q-tooltip>Subir archivo firmado</q-tooltip>
+                  <q-tooltip>{{
+                    props.row.archivo_Firmado_URL == null
+                      ? "Subir archivo firmado"
+                      : "Ver archivo firmado"
+                  }}</q-tooltip>
                 </q-btn>
               </div>
               <label v-else-if="col.name == 'folio'" class="text-bold">{{
                 col.value
               }}</label>
+              <div v-else-if="col.name == 'archivo_Firmado_URL'">
+                <q-icon
+                  size="sm"
+                  :name="col.value != null ? 'check_circle' : 'close'"
+                  :color="col.value != null ? 'green' : 'red'"
+                />
+              </div>
               <div v-else-if="col.name === 'estatus_Ticket'">
-                <q-badge :color="col.value == 'Pendiente' ? 'orange' : 'green'">
+                <q-badge
+                  :color="
+                    col.value == 'Pendiente'
+                      ? 'orange'
+                      : col.value == 'En Proceso'
+                      ? 'secondary'
+                      : 'green'
+                  "
+                >
                   {{ col.value }}
                   <q-icon
-                    :name="col.value == 'Pendiente' ? 'warning' : 'done'"
+                    :name="
+                      col.value == 'Pendiente'
+                        ? 'warning'
+                        : col.value == 'En Proceso'
+                        ? 'pending'
+                        : 'done'
+                    "
                   />
                 </q-badge>
               </div>
@@ -171,30 +197,32 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
 import { useHerlpersStore } from "src/stores/helpers-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
 import { useInventarioStore } from "src/stores/inventario-store";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import { onBeforeMount, ref, watchEffect } from "vue";
 import Swal from "sweetalert2";
 
+//---------------------------------------------------------------
+
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
 const helpersStore = useHerlpersStore();
 const inventarioStore = useInventarioStore();
 const evidenciasStore = useEvidenciasStore();
+const misSolicitudesStore = useMisSolicitudesStore();
 const tiposSolicitudesStore = useTiposSolicitudesStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
-const { list_Areas } = storeToRefs(helpersStore);
-const { list_Tipos_Solicitudes } = storeToRefs(tiposSolicitudesStore);
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const {
   list_Solicitudes_Tickets,
   list_Seguimiento_By_Ticket,
   list_Tickets_Filtro,
-} = storeToRefs(ticketsStore);
+} = storeToRefs(ticketsSolicitudesStore);
+const { list_Areas } = storeToRefs(helpersStore);
+const { list_Tipos_Solicitudes } = storeToRefs(tiposSolicitudesStore);
 const props = defineProps({
   tipo: {
     type: String,
@@ -204,9 +232,13 @@ const visible_colums = ref([]);
 const area_Id = ref({ value: 0, label: "Todos" });
 const tipo_Solicitud = ref({ value: 0, label: "Todos" });
 
+//---------------------------------------------------------------
+
 onBeforeMount(() => {
   cargarData();
 });
+
+//---------------------------------------------------------------
 
 const loading = () => {
   $q.loading.show({
@@ -220,12 +252,7 @@ const loading = () => {
 };
 
 const cargarData = async () => {
-  loading();
   cargarColumnas();
-  await helpersStore.load_Areas();
-  await ticketsStore.load_Solicitudes_Tickets();
-  await tiposSolicitudesStore.load_Tipos_Solicitudes();
-  $q.loading.hide();
 };
 
 const alertNotify = (position, type, resp) => {
@@ -246,22 +273,22 @@ const alertNotify = (position, type, resp) => {
 
 const verSolicitud = async (id) => {
   loading();
-  await solicitudesTicketStore.load_Solicitud_By_Ticket(id);
+  await misSolicitudesStore.load_Solicitud_By_Id(id);
   await evidenciasStore.load_Evidencias_By_Ticket(id);
   await inventarioStore.load_Inventario_By_Ticket(id);
-  await ticketsStore.load_Seguimiento_By_Ticket(id);
-  ticketsStore.actualizarModal(true);
+  await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(id);
+  ticketsSolicitudesStore.actualizarModal(true);
   if (props.tipo == "concluidas") {
-    ticketsStore.actualizarVisualizar(true);
+    ticketsSolicitudesStore.actualizarVisualizar(true);
   } else {
-    ticketsStore.actualizarVisualizar(false);
+    ticketsSolicitudesStore.actualizarVisualizar(false);
   }
   $q.loading.hide();
 };
 
 const subirArchivoFirmado = async (row) => {
-  await solicitudesTicketStore.load_Solicitud_By_Ticket(row.id);
-  ticketsStore.actualizarModalArchivo(true);
+  await misSolicitudesStore.load_Solicitud_By_Id(row.id);
+  ticketsSolicitudesStore.actualizarModalArchivo(true);
 };
 
 const cargarColumnas = () => {
@@ -269,7 +296,6 @@ const cargarColumnas = () => {
     case "pendientes":
       visible_colums.value = [
         "id",
-        "folio",
         "solicitante",
         "fecha_Creacion",
         "estatus_Ticket",
@@ -300,6 +326,7 @@ const cargarColumnas = () => {
         "fecha_Creacion",
         "estatus_Ticket",
         "solicitante_Area",
+        "archivo_Firmado_URL",
       ];
       break;
     default:
@@ -319,7 +346,7 @@ const verOpinion = async (row) => {
 };
 
 const concluirTicket = async (id) => {
-  await ticketsStore.load_Seguimiento_By_Ticket(id);
+  await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(id);
   if (list_Seguimiento_By_Ticket.value.length > 0) {
     let encontrar = list_Seguimiento_By_Ticket.value.filter(
       (x) => x.estatus != "Concluido"
@@ -327,7 +354,7 @@ const concluirTicket = async (id) => {
     if (encontrar.length == 0) {
       Swal.fire({
         title: "Concluir ticket",
-        text: "¿Está seguro de concluir el ticket?",
+        text: "Describir nota de conclusión",
         input: "text",
         inputAttributes: {
           autocapitalize: "off",
@@ -339,11 +366,11 @@ const concluirTicket = async (id) => {
         allowOutsideClick: false,
         cancelButtonColor: "#f44336",
         confirmButtonColor: "#26A69A",
-        cancelButtonText: `No, regresar`,
-        confirmButtonText: `Si, concluir`,
+        cancelButtonText: `Regresar`,
+        confirmButtonText: `Concluir`,
         inputValidator: (value) => {
           if (!value) {
-            return "Se requiere observación";
+            return "Se requiere nota de conclusión";
           }
         },
       }).then(async (result) => {
@@ -352,9 +379,12 @@ const concluirTicket = async (id) => {
           let resp = null;
           let concluirFormData = new FormData();
           concluirFormData.append("Observaciones", result.value);
-          resp = await ticketsStore.concluir_Ticket(id, concluirFormData);
+          resp = await ticketsSolicitudesStore.concluir_Ticket(
+            id,
+            concluirFormData
+          );
           if (resp.success) {
-            await ticketsStore.load_Solicitudes_Tickets();
+            await ticketsSolicitudesStore.load_Solicitudes_Tickets();
             alertNotify("top-right", "positive", resp.data);
           } else {
             alertNotify("top-right", "negative", resp.data);
@@ -458,6 +488,12 @@ const columns = [
     align: "center",
     label: "Fecha conclusión",
     field: "fecha_Fin",
+  },
+  {
+    name: "archivo_Firmado_URL",
+    align: "center",
+    label: "Archivo firmado",
+    field: "archivo_Firmado_URL",
   },
   {
     name: "id",

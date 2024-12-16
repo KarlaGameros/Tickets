@@ -34,17 +34,23 @@
     </div>
     <TablaComp />
     <ModalComp />
+    <ModalNota />
   </q-page>
 </template>
 
 <script setup>
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import TablaComp from "../components/TablaComp.vue";
 import ModalComp from "../components/ModalComp.vue";
+import ModalNota from "../components/ModalNota.vue";
 
-const solicitudesTicketStore = useSolicitudesTicketStore();
+//---------------------------------------------------------------
+
+const misSolicitudesStore = useMisSolicitudesStore();
+
+//---------------------------------------------------------------
 
 const actualizarModal = (valor) => {
-  solicitudesTicketStore.updateModal(valor);
+  misSolicitudesStore.updateModalSolicitudes(valor);
 };
 </script>

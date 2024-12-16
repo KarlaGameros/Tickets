@@ -29,6 +29,21 @@
       <q-card-section>
         <q-form @submit="onSubmit">
           <div class="row q-col-gutter-sm">
+            <div class="col-12">
+              <q-select
+                v-model="area_Id"
+                :options="list_Areas"
+                label="Área"
+                hint="Seleccione un área"
+                lazy-rules
+                :rules="[(val) => !!val || 'El área es requerida']"
+                color="purple-ieen"
+              >
+                <template v-slot:prepend>
+                  <q-icon color="purple-ieen" name="apartment" />
+                </template>
+              </q-select>
+            </div>
             <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <q-input
                 color="purple-ieen"
@@ -75,7 +90,9 @@
 </template>
 
 <script setup>
+import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
+import { useHerlpersStore } from "src/stores/helpers-store";
 import { useCategoriasStore } from "src/stores/categorias-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 
@@ -83,10 +100,25 @@ import { useQuasar, QSpinnerFacebook } from "quasar";
 
 const $q = useQuasar();
 const categoriasStore = useCategoriasStore();
-const { categoria, subcategoria, modal, is_Editar } =
-  storeToRefs(categoriasStore);
+const helpersStore = useHerlpersStore();
+const { list_Areas } = storeToRefs(helpersStore);
+const { categoria, modal, is_Editar } = storeToRefs(categoriasStore);
+const area_Id = ref(null);
 
 //---------------------------------------------------------------
+
+watch(categoria.value, (val) => {
+  if (val != null && is_Editar.value) {
+    cargarArea(val);
+  }
+});
+
+const cargarArea = (val) => {
+  if (area_Id.value == null) {
+    let areaFiltrado = list_Areas.value.find((x) => x.value == val.area_Id);
+    area_Id.value = areaFiltrado;
+  }
+};
 
 const loading = () => {
   $q.loading.show({
@@ -100,6 +132,7 @@ const loading = () => {
 };
 
 const actualizarModal = (valor) => {
+  area_Id.value = null;
   categoriasStore.initCategoria();
   categoriasStore.initSubcategoria();
   categoriasStore.actualizarModal(valor);
@@ -125,6 +158,7 @@ const alertNotify = (position, type, resp) => {
 const onSubmit = async () => {
   loading();
   let resp = null;
+  categoria.value.area_Id = area_Id.value.value;
   if (is_Editar.value) {
     resp = await categoriasStore.update_Categoria(categoria.value);
   } else {

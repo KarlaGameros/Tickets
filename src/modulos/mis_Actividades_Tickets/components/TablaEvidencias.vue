@@ -17,7 +17,7 @@
                   round
                   color="purple-ieen"
                   icon="visibility"
-                  @click="verEvidencia(props.row.evidencia_URL)"
+                  @click="verEvidencia(props.row)"
                 >
                   <q-tooltip>Ver evidencia</q-tooltip>
                 </q-btn>
@@ -43,16 +43,16 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
-import { useTicketsStore } from "src/stores/tickets-store";
 
 //---------------------------------------------------------------
 
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const evidenciasStore = useEvidenciasStore();
-const { seguimiento, is_Visualizar } = storeToRefs(ticketsStore);
+const { seguimiento, is_Visualizar } = storeToRefs(ticketsSolicitudesStore);
 const { list_Evidencias_Ticket_Detalle } = storeToRefs(evidenciasStore);
 
 //---------------------------------------------------------------
@@ -86,13 +86,10 @@ const alertNotify = (position, type, resp) => {
 
 const verEvidencia = (evidencia) => {
   $q.dialog({
-    title: "Ver",
-    style: "width: 800px; max-width: 80vw",
-    message: `<iframe
-            src="${evidencia}"
-            width="100%"
-            height="550"
-          ></iframe>`,
+    title: "<p style='text-align: center; color: #673e84'>Ver evidencia</p>",
+    style: "width: 800px; max-width: 65vw",
+    message: `<strong>Descripción: ${evidencia.descripcion}</strong>
+    <iframe src="${evidencia.evidencia_URL}" width="100%" height="550"></iframe>`,
     html: true,
     ok: "Cerrar",
   });

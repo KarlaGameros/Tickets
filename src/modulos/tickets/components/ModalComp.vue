@@ -101,7 +101,7 @@
               >
                 <q-input
                   readonly
-                  v-model="inventario_Ticket.nombre_Corto"
+                  v-model="inventario_Ticket.label"
                   label="Inventario con falla"
                 >
                   <template v-slot:prepend>
@@ -147,11 +147,30 @@
                         dense
                         round
                         icon="visibility"
-                        @click="verEvidencia(evidencia.evidencia_URL)"
+                        @click="verEvidencia(evidencia)"
                       />
                     </q-item-section>
                   </q-item>
                 </q-list>
+              </div>
+              <div
+                v-if="
+                  solicitud.estatus_Ticket == 'Pendiente' &&
+                  (encryptStorage.decrypt('perfil') == 'Super Administrador' ||
+                    encryptStorage.decrypt('perfil') == 'Administrador')
+                "
+                class="col-12 text-right q-pt-lg"
+              >
+                <q-btn
+                  @click="cambiarTipoSolicitud"
+                  label="Cambiar a solicitudes"
+                  icon-right="change_circle"
+                  color="purple-ieen"
+                  ><q-tooltip
+                    >Al cambiar, el tratamiento se hará en el apartado
+                    "Solicitudes"</q-tooltip
+                  >
+                </q-btn>
               </div>
             </div>
           </q-step>
@@ -221,7 +240,7 @@
                   stack-label
                   color="purple-ieen"
                   v-model="tipo_Id"
-                  :options="list_Tipos_Solicitudes"
+                  :options="list_Tipos_Solicitudes_Filtrado"
                   label="Tipo de solicitud"
                   hint="Seleccione tipo"
                   lazy-rules
@@ -387,26 +406,28 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
+import { EncryptStorage } from "storage-encryption";
 import { useHerlpersStore } from "src/stores/helpers-store";
 import { useCategoriasStore } from "src/stores/categorias-store";
 import { useInventarioStore } from "src/stores/inventario-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
 import { onBeforeMount, ref, watch } from "vue";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 
 //-----------------------------------------------------------
 
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
 const helpersStore = useHerlpersStore();
 const evidenciasStore = useEvidenciasStore();
 const categoriasStore = useCategoriasStore();
 const inventarioStore = useInventarioStore();
+const misSolicitudesStore = useMisSolicitudesStore();
 const tiposSolicitudesStore = useTiposSolicitudesStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
+const encryptStorage = new EncryptStorage("SECRET_KEY", "sessionStorage");
 const {
   modal,
   responsable,
@@ -415,12 +436,12 @@ const {
   sustituir_Responsable,
   seguimiento_Sustituir,
   list_Seguimiento_By_Ticket,
-} = storeToRefs(ticketsStore);
-const { solicitud } = storeToRefs(solicitudesTicketStore);
+} = storeToRefs(ticketsSolicitudesStore);
+const { solicitud } = storeToRefs(misSolicitudesStore);
 const { inventario_Ticket } = storeToRefs(inventarioStore);
+const { list_Personal_By_Area } = storeToRefs(helpersStore);
 const { list_Tipos_Solicitudes } = storeToRefs(tiposSolicitudesStore);
 const { list_Evidencias_Ticket } = storeToRefs(evidenciasStore);
-const { list_Areas, list_Personal_By_Area } = storeToRefs(helpersStore);
 const { list_Categorias, list_Subcategorias } = storeToRefs(categoriasStore);
 const step = ref(1);
 const tipo_Id = ref(null);
@@ -431,6 +452,7 @@ const subcategoria_Id = ref(null);
 const puesto_Responsable = ref(null);
 const personal_Responsable_Id = ref(null);
 const personal_Seguimiento_Id = ref(null);
+const list_Tipos_Solicitudes_Filtrado = ref([]);
 const list_Prioridad = ref(["Baja", "Media", "Alta"]);
 
 //-----------------------------------------------------------
@@ -471,12 +493,10 @@ const cargarData = async () => {
   await helpersStore.load_Areas();
   await categoriasStore.load_Categorias();
   await tiposSolicitudesStore.load_Tipos_Solicitudes();
-  let areaInformatica = list_Areas.value.find(
-    (x) => x.label == "Unidad Técnica de Informática y Estadística"
+  await helpersStore.load_Personal_By_Area(encryptStorage.decrypt("area_Id"));
+  list_Tipos_Solicitudes_Filtrado.value = list_Tipos_Solicitudes.value.filter(
+    (x) => x.label != "Solicitudes"
   );
-  if (areaInformatica != null) {
-    await helpersStore.load_Personal_By_Area(areaInformatica.value);
-  }
   $q.loading.hide();
 };
 
@@ -527,25 +547,22 @@ const cargarPersonalSeguimiento = async (val) => {
   }
 };
 
-const verEvidencia = (url) => {
+const verEvidencia = (evidencia) => {
   $q.dialog({
-    title: "Ver",
+    title: "<p style='text-align: center; color: #673e84'>Ver evidencia</p>",
     style: "width: 800px; max-width: 65vw",
-    message: `<iframe
-            src="${url}"
-            width="100%"
-            height="550"
-          ></iframe>`,
+    message: `<strong>Descripción: ${evidencia.descripcion}</strong>
+    <iframe src="${evidencia.evidencia_URL}" width="100%" height="550"></iframe>`,
     html: true,
     ok: "Cerrar",
   });
 };
 
 const verEvidenciasSeguimiento = async (row) => {
-  await ticketsStore.get_Seguimiento_By_Id(row.id);
+  await ticketsSolicitudesStore.get_Seguimiento_By_Id(row.id);
   await evidenciasStore.load_Evidencias_Seguimiento_By_Ticket(row.id);
-  ticketsStore.actualizarModalDetalleSeguimiento(true);
-  ticketsStore.actualizarVisualizar(true);
+  ticketsSolicitudesStore.actualizarModalDetalleSeguimiento(true);
+  ticketsSolicitudesStore.actualizarVisualizar(true);
 };
 
 const agregarCategoria = () => {
@@ -596,7 +613,7 @@ const sustituirResponsable = async () => {
         (x) => x.tipo == "Seguimiento principal"
       );
 
-      let resp = await ticketsStore.sustituir_Responsable_Ticket(
+      let resp = await ticketsSolicitudesStore.sustituir_Responsable_Ticket(
         sustituir_Responsable.value
       );
 
@@ -618,11 +635,11 @@ const sustituirResponsable = async () => {
             encontro.titulo_Actividad_Realizada;
           seguimiento_Sustituir.value.observaciones = "";
           seguimiento_Sustituir.value.tipoFiltrado = encontro.tipo;
-          await ticketsStore.update_Detalle_Seguimienti(
+          await ticketsSolicitudesStore.update_Detalle_Seguimienti(
             seguimiento_Sustituir.value
           );
         }
-        await ticketsStore.load_Solicitudes_Tickets();
+        await ticketsSolicitudesStore.load_Solicitudes_Tickets();
         actualizarModal(false);
         alertNotify("top-right", "positive", resp.data);
       } else {
@@ -634,8 +651,8 @@ const sustituirResponsable = async () => {
 
 const actualizarModal = (valor) => {
   limpiar();
-  ticketsStore.actualizarModal(valor);
-  ticketsStore.actualizarVisualizar(false);
+  ticketsSolicitudesStore.actualizarModal(valor);
+  ticketsSolicitudesStore.actualizarVisualizar(false);
 };
 
 const limpiar = () => {
@@ -645,11 +662,11 @@ const limpiar = () => {
   prioridad_Id.value = null;
   categoria_Id.value = null;
   subcategoria_Id.value = null;
-  ticketsStore.initResponsable();
+  ticketsSolicitudesStore.initResponsable();
   puesto_Responsable.value = null;
   personal_Responsable_Id.value = null;
   personal_Seguimiento_Id.value = null;
-  solicitudesTicketStore.initSolicitudTicket();
+  misSolicitudesStore.initSolicitud();
 };
 
 const loading = () => {
@@ -679,13 +696,21 @@ const alertNotify = (position, type, resp) => {
   });
 };
 
+const cambiarTipoSolicitud = async () => {
+  loading();
+  await inventarioStore.load_Inventario_By_Ticket(solicitud.value.id);
+  ticketsSolicitudesStore.actualizarModalCambiarSolicitud(true);
+  $q.loading.hide();
+};
+
 const onSubmit = async () => {
   loading();
+  let resp = null;
   responsable.value.responsable_Ticket_Id = personal_Responsable_Id.value.value;
   responsable.value.prioridad = prioridad_Id.value;
   responsable.value.tipo_Solicitud_Id = tipo_Id.value.value;
   responsable.value.subcategoria_Id = subcategoria_Id.value.value;
-  let resp = await ticketsStore.asignar_Responsable_Ticket(
+  resp = await ticketsSolicitudesStore.asignar_Responsable_Ticket(
     solicitud.value.id,
     responsable.value
   );
@@ -695,16 +720,17 @@ const onSubmit = async () => {
     seguimiento.value.tipo = "Seguimiento principal";
     seguimiento.value.solicitud_Ticket_Id = solicitud.value.id;
     seguimiento.value.titulo_Actividad_Realizada = solicitud.value.descripcion;
-    let respSeguimiento = await ticketsStore.create_Seguimiento(
+    let respSeguimiento = await ticketsSolicitudesStore.create_Seguimiento(
       seguimiento.value
     );
     if (respSeguimiento.success) {
-      await ticketsStore.load_Solicitudes_Tickets();
-      await ticketsStore.load_Seguimiento_Ticket();
+      await ticketsSolicitudesStore.load_Solicitudes_Tickets();
+      await ticketsSolicitudesStore.load_Seguimiento_Ticket();
       actualizarModal(false);
-      alertNotify("top-right", "positive", resp.data);
+      alertNotify("top-right", "positive", respSeguimiento.data);
     } else {
-      alertNotify("top-right", "negative", resp.data);
+      await ticketsSolicitudesStore.load_Solicitudes_Tickets();
+      alertNotify("top-right", "negative", respSeguimiento.data);
     }
   } else {
     alertNotify("top-right", "negative", resp.data);

@@ -78,8 +78,8 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useQuasar, QSpinnerFacebook } from "quasar";
 import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
+import { useQuasar, QSpinnerFacebook } from "quasar";
 
 //---------------------------------------------------------------
 

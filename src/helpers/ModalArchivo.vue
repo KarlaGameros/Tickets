@@ -7,10 +7,20 @@
   >
     <q-card style="width: 600px; max-width: 40vw">
       <q-card-section class="row flotante">
-        <q-img
-          src="../../../assets/IEEN300.png"
-          :width="$q.screen.xs ? '60px' : '90px'"
-        />
+        <div
+          v-if="solicitud.archivo_Firmado_URL != null"
+          class="text-h6 text-gray-ieen-1 text-bold absolute-center text-center"
+        >
+          Ticket concluido <br />
+          <p class="text-purple-ieen">{{ solicitud.folio }}</p>
+        </div>
+        <div
+          v-else
+          class="text-h6 text-gray-ieen-1 text-bold absolute-center text-center"
+        >
+          Subir vale firmado<br />
+          <p class="text-purple-ieen">{{ solicitud.folio }}</p>
+        </div>
         <q-space />
         <q-btn
           icon="close"
@@ -23,8 +33,16 @@
       </q-card-section>
       <q-card-section>
         <q-form @submit="onSubmit" class="row q-col-gutter-sm">
+          <div
+            v-if="solicitud.archivo_Firmado_URL != null"
+            class="text-subtitle1"
+          >
+            <b>Nota de conclusión:</b>
+            {{ solicitud.observaciones }}
+          </div>
           <div v-if="solicitud.archivo_Firmado_URL == null" class="col-12">
             <q-file
+              color="purple-ieen"
               accept=".jpg, image/*, .pdf"
               hint="Subir archivo firmado"
               lazy-rules
@@ -71,24 +89,24 @@
 <script setup>
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
-import { useSolicitudesTicketStore } from "src/stores/mis-solicitudes-ticket";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 
 //-----------------------------------------------------------
 
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
-const solicitudesTicketStore = useSolicitudesTicketStore();
-const { modal_Archivo } = storeToRefs(ticketsStore);
-const { solicitud } = storeToRefs(solicitudesTicketStore);
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
+const misSolicitudesStore = useMisSolicitudesStore();
+const { modal_Archivo } = storeToRefs(ticketsSolicitudesStore);
+const { solicitud } = storeToRefs(misSolicitudesStore);
 const archivo = ref(null);
 
 //-----------------------------------------------------------
 
 const actualizarModal = (valor) => {
-  solicitudesTicketStore.initSolicitudTicket();
-  ticketsStore.actualizarModalArchivo(valor);
+  misSolicitudesStore.initSolicitud();
+  ticketsSolicitudesStore.actualizarModalArchivo(valor);
 };
 
 const loading = () => {
@@ -122,12 +140,13 @@ const onSubmit = async () => {
   loading();
   let archivoFormData = new FormData();
   archivoFormData.append("Archivo", archivo.value);
-  let resp = await ticketsStore.subir_Archivo_Firmado(
+  let resp = await ticketsSolicitudesStore.subir_Archivo_Firmado(
     solicitud.value.id,
     archivoFormData
   );
   if (resp.success) {
-    await ticketsStore.load_Solicitudes_Tickets();
+    await ticketsSolicitudesStore.load_Solicitudes_Tickets();
+    await ticketsSolicitudesStore.load_Solicitudes();
     actualizarModal(false);
     alertNotify("top-right", "positive", resp.data);
   } else {

@@ -19,9 +19,13 @@
       </div>
     </div>
     <TablaComp />
+    <ModalComp />
   </q-page>
 </template>
 
 <script setup>
 import TablaComp from "../components/TablaComp.vue";
+import ModalComp from "src/modulos/mis_Tickets/components/ModalComp.vue";
+
+//---------------------------------------------------------------
 </script>

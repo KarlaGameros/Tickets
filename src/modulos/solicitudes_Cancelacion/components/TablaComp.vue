@@ -76,20 +76,44 @@
                   flat
                   round
                   color="purple-ieen"
+                  icon="visibility"
+                  @click="verSolicitud(props.row.solicitud_Ticket_Id)"
+                >
+                  <q-tooltip>Ver solicitud</q-tooltip>
+                </q-btn>
+                <q-btn
+                  v-if="props.row.estatus == 'Pendiente'"
+                  flat
+                  round
+                  color="purple-ieen"
                   icon="check_circle"
                   @click="aprobarSolicitud(col.value)"
                 >
-                  <q-tooltip>Ver solicitud</q-tooltip>
+                  <q-tooltip>Aprobar solicitud</q-tooltip>
                 </q-btn>
               </div>
               <label v-else-if="col.name == 'folio'" class="text-bold">{{
                 col.value
               }}</label>
               <div v-else-if="col.name === 'estatus'">
-                <q-badge :color="col.value == 'Pendiente' ? 'orange' : 'green'">
+                <q-badge
+                  :color="
+                    col.value == 'Pendiente'
+                      ? 'orange'
+                      : col.value == 'Rechazada'
+                      ? 'red'
+                      : 'green'
+                  "
+                >
                   {{ col.value }}
                   <q-icon
-                    :name="col.value == 'Pendiente' ? 'warning' : 'done'"
+                    :name="
+                      col.value == 'Pendiente'
+                        ? 'warning'
+                        : col.value == 'Rechazada'
+                        ? 'close'
+                        : 'done'
+                    "
                   />
                 </q-badge>
               </div>
@@ -109,15 +133,19 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
+import { useEvidenciasStore } from "src/stores/evidencias-store";
 import { onBeforeMount, ref } from "vue";
 import { useCancelacionesStore } from "src/stores/cancelaciones-store";
+import { useMisSolicitudesStore } from "src/stores/mis-solicitudes-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import Swal from "sweetalert2";
 
 //---------------------------------------------------------------
 
 const $q = useQuasar();
+const evidenciasStore = useEvidenciasStore();
 const cancelacionesStore = useCancelacionesStore();
+const misSolicitudesStore = useMisSolicitudesStore();
 const { list_Solicitudes_Cancelacion } = storeToRefs(cancelacionesStore);
 
 //---------------------------------------------------------------
@@ -141,23 +169,44 @@ const loading = () => {
   });
 };
 
+const verSolicitud = async (id) => {
+  loading();
+  misSolicitudesStore.updateModal(true);
+  await misSolicitudesStore.load_Solicitud_By_Id(id);
+  await evidenciasStore.load_Evidencias_By_Ticket(id);
+  misSolicitudesStore.updateIsVisualize(true);
+  $q.loading.hide();
+};
+
 const aprobarSolicitud = (id) => {
   Swal.fire({
     icon: "warning",
     reverseButtons: true,
     showCloseButton: true,
-    showCancelButton: true,
+    showDenyButton: true,
     allowOutsideClick: false,
-    cancelButtonColor: "#f44336",
+    denyButtonColor: "#f44336",
     confirmButtonColor: "#26A69A",
-    cancelButtonText: `No, regresar`,
-    confirmButtonText: `Si, aprobar`,
-    title: "¿Aprobar solicitud de cancelación?",
-    text: "Si aprueba afectará el estatus del ticket",
+    denyButtonText: `Cancelar solicitud`,
+    confirmButtonText: `Aprobar solicitud`,
+    title: "¿Desea aprobar o cancelar la solicitud?",
+    text: "Se afectará el estatus del ticket",
   }).then(async (result) => {
     if (result.isConfirmed) {
       loading();
-      const resp = await cancelacionesStore.aprobarSolicitudCancelacion(id);
+      const resp = await cancelacionesStore.aprobarSolicitudCancelacion(id, 1);
+      if (resp.success) {
+        $q.loading.hide();
+        await cancelacionesStore.load_Solicitudes_Cancelacion();
+        alertNotify("top-right", "positive", resp.data);
+      } else {
+        $q.loading.hide();
+        alertNotify("top-right", "negative", resp.data);
+      }
+    }
+    if (result.isDenied) {
+      loading();
+      const resp = await cancelacionesStore.aprobarSolicitudCancelacion(id, 2);
       if (resp.success) {
         $q.loading.hide();
         await cancelacionesStore.load_Solicitudes_Cancelacion();
@@ -189,13 +238,6 @@ const alertNotify = (position, type, resp) => {
 //---------------------------------------------------------------
 
 const columns = [
-  {
-    name: "folio_Solicitud_Ticket",
-    label: "Folio",
-    field: "folio_Solicitud_Ticket",
-    sortable: true,
-    align: "center",
-  },
   {
     name: "estatus",
     label: "Estatus",

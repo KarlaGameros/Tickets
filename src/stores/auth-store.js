@@ -22,6 +22,19 @@ export const useAuthStore = defineStore("auth", {
       apellido_Paterno: null,
       solicitante_Area_Id: null,
     },
+    responsable: {
+      id: null,
+      area: null,
+      puesto: null,
+      activo: false,
+      area_Id: null,
+      empleado: null,
+      puesto_Id: null,
+      created_at: null,
+      empleado_Id: null,
+      fecha_Asignacion: null,
+      fecha_destitucion: null,
+    },
   }),
   actions: {
     //-----------------------------------------------------------
@@ -190,6 +203,42 @@ export const useAuthStore = defineStore("auth", {
             this.usuario.tipo_Empleado_Id = data.tipo_Empleado_Id;
             this.usuario.apellido_Paterno = data.apellido_Paterno;
             this.usuario.nombre_Completo = `${data.nombres} ${data.apellido_Paterno} ${data.apellido_Materno}`;
+          } else {
+            return { success, data };
+          }
+        } else {
+          return {
+            success: false,
+            data: "Ocurrió un error, inténtelo de nuevo. Si el error persiste, contacte a soporte",
+          };
+        }
+      } catch (error) {
+        return {
+          success: false,
+          data: "Ocurrió un error, inténtelo de nuevo. Si el error persiste, contacte a soporte",
+        };
+      }
+    },
+
+    //-----------------------------------------------------------
+    //GET RESPONSABLE DE ÁREA BY USUARIO
+    async get_Responsable_By_Usuario() {
+      try {
+        const resp = await api.get("/ResponsablesAreas/ResposableByUsuario");
+        if (resp.status == 200) {
+          const { success, data } = resp.data;
+          if (success === true) {
+            this.responsable.id = data.id;
+            this.responsable.area = data.area;
+            this.responsable.area = data.area;
+            this.responsable.activo = data.activo;
+            this.responsable.area_Id = data.area_Id;
+            this.responsable.empleado = data.empleado;
+            this.responsable.puesto_Id = data.puesto_Id;
+            this.responsable.created_at = data.created_at;
+            this.responsable.empleado_Id = data.empleado_Id;
+            this.responsable.fecha_Asignacion = data.fecha_Asignacion;
+            this.responsable.fecha_destitucion = data.fecha_destitucion;
           } else {
             return { success, data };
           }

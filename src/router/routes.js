@@ -13,13 +13,12 @@ const routes = [
         path: "/mis_Actividades",
         name: "mis_Actividades",
         component: () =>
-          import("../modulos/mis_Actividades/pages/IndexPage.vue"),
+          import("../modulos/mis_Actividades_Tickets/pages/IndexPage.vue"),
       },
       {
-        path: "/mis_Solicitudes",
-        name: "mis_Solicitudes",
-        component: () =>
-          import("../modulos/mis_Solicitudes/pages/IndexPage.vue"),
+        path: "/mis_Tickets",
+        name: "mis_Tickets",
+        component: () => import("../modulos/mis_Tickets/pages/IndexPage.vue"),
       },
       {
         path: "/tipo_Solicitudes",
@@ -52,6 +51,29 @@ const routes = [
         path: "/configuracion",
         name: "configuracion",
         component: () => import("../modulos/configuracion/pages/IndexPage.vue"),
+      },
+      {
+        path: "/notificaciones",
+        name: "notificaciones",
+        component: () =>
+          import("../modulos/notificaciones/pages/IndexPage.vue"),
+      },
+      {
+        path: "/mis_Solicitudes",
+        name: "mis_Solicitudes",
+        component: () =>
+          import("../modulos/mis_Solicitudes/pages/IndexPage.vue"),
+      },
+      {
+        path: "/solicitudes",
+        name: "solicitudes",
+        component: () => import("../modulos/solicitudes/pages/IndexPage.vue"),
+      },
+      {
+        path: "/mis_Actividades_Solicitudes",
+        name: "mis_Actividades_Solicitudes",
+        component: () =>
+          import("../modulos/mis_Actividades_Solicitudes/pages/IndexPage.vue"),
       },
     ],
   },

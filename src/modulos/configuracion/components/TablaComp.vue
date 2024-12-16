@@ -3,7 +3,7 @@
     <div class="col-12">
       <q-table
         :grid="$q.screen.xs"
-        :rows="list_Categorias"
+        :rows="list_Categorias_Filtrado"
         :columns="columns"
         :filter="filter"
         :pagination="pagination"
@@ -12,6 +12,15 @@
         rows-per-page-label="Filas por pagina"
         no-data-label="No hay registros"
       >
+        <template v-slot:top-left>
+          <q-select
+            v-model="area_Id"
+            color="purple-ieen"
+            style="width: 250px"
+            :options="list_Areas_Filtro"
+            label="Buscar por área"
+          />
+        </template>
         <template v-slot:top-right>
           <q-input
             color="purple-ieen"
@@ -103,16 +112,22 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { onBeforeMount, ref } from "vue";
+import { useHerlpersStore } from "src/stores/helpers-store";
 import { useCategoriasStore } from "src/stores/categorias-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
+import { onBeforeMount, ref, watchEffect } from "vue";
 import Swal from "sweetalert2";
 
 //---------------------------------------------------------------
 
 const $q = useQuasar();
+const helpersStore = useHerlpersStore();
 const categoriasStore = useCategoriasStore();
+const { list_Areas } = storeToRefs(helpersStore);
 const { list_Categorias } = storeToRefs(categoriasStore);
+const list_Areas_Filtro = ref([]);
+const list_Categorias_Filtrado = ref([]);
+const area_Id = ref({ value: 0, label: "Todos" });
 
 //---------------------------------------------------------------
 
@@ -120,18 +135,26 @@ onBeforeMount(() => {
   cargarData();
 });
 
+//---------------------------------------------------------------
+
 const cargarData = async () => {
   loading();
+  await helpersStore.load_Areas();
   await categoriasStore.load_Categorias();
+  list_Areas_Filtro.value = list_Areas.value;
+  list_Areas_Filtro.value.splice(0, 0, {
+    value: 0,
+    label: "Todos",
+  });
   $q.loading.hide();
 };
 
 const editarCategoria = async (id) => {
   loading();
+  categoriasStore.actualizarIsEditar(true);
   await categoriasStore.load_Categoria_By_Id(id);
   await categoriasStore.load_Subcategorias(id);
   categoriasStore.actualizarModal(true);
-  categoriasStore.actualizarIsEditar(true);
   $q.loading.hide();
 };
 
@@ -198,6 +221,26 @@ const eliminarCategoria = async (id) => {
   });
 };
 
+const filtrar = (list, filtro) => {
+  list_Categorias_Filtrado.value = list.filter((item) => {
+    let cumple = true;
+    if (filtro.area !== undefined) {
+      if (filtro.area == 0) {
+        cumple = cumple && item.area_Id === item.area_Id;
+      } else {
+        cumple = cumple && item.area_Id === parseInt(filtro.area);
+      }
+    }
+    return cumple;
+  });
+};
+
+watchEffect(() => {
+  const filtro = {};
+  if (area_Id.value != null) filtro.area = area_Id.value.value;
+  filtrar(list_Categorias.value, filtro);
+});
+
 //---------------------------------------------------------------
 
 const columns = [
@@ -212,6 +255,13 @@ const columns = [
     name: "descripcion",
     label: "Descripción",
     field: "descripcion",
+    sortable: true,
+    align: "center",
+  },
+  {
+    name: "area",
+    label: "Área",
+    field: "area",
     sortable: true,
     align: "center",
   },

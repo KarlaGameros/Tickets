@@ -22,10 +22,8 @@
       <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12 q-pa-sm">
         <q-card flat bordered style="border-radius: 10px" class="my-card">
           <q-card-section>
-            <div class="text-subtitle1 text-bold text-grey-8">
-              Tablero de sistemas de tickets
-            </div>
-            La siguiente información corresponde a las solicitudes de tickets
+            <div class="text-h6 text-bold text-grey-8">Tablero</div>
+            La siguiente información corresponde a tickets y solicitudes
           </q-card-section>
         </q-card>
       </div>
@@ -114,7 +112,7 @@
       </div>
       <div class="col-lg-8 col-md-8 col-sm-8 col-xs-12 q-pa-sm">
         <q-card flat bordered style="border-radius: 10px" class="my-card">
-          <q-card-section v-if="list_Tickets_By_Area.length > 0">
+          <q-card-section v-if="list_Solicitudes_Trimestral.length > 0">
             <ChartGeneral />
           </q-card-section>
         </q-card>
@@ -158,34 +156,41 @@
 <script setup>
 import { storeToRefs } from "pinia";
 import { useTableroStore } from "src/stores/tablero-store";
-import { useTicketsStore } from "src/stores/tickets-store";
 import { useHerlpersStore } from "src/stores/helpers-store";
 import { onBeforeMount, ref } from "vue";
 import { useTiposSolicitudesStore } from "src/stores/tipo_solicitudes-store";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import ChartPie from "../components/ChartPie.vue";
 import TablaComp from "../components/TablaComp.vue";
 import ChartGeneral from "src/modulos/tablero/components/ChartGeneral.vue";
 
-const ticketsStore = useTicketsStore();
-const helpersStore = useHerlpersStore();
+//---------------------------------------------------------------
+
 const tableroStore = useTableroStore();
+const helpersStore = useHerlpersStore();
 const tiposSolictudesStore = useTiposSolicitudesStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const { list_Personal_By_Area } = storeToRefs(helpersStore);
-const { list_Tickets_By_Area, list_Seguimiento_By_Personal } =
+const { list_Solicitudes_Trimestral, list_Seguimiento_By_Personal } =
   storeToRefs(tableroStore);
-const { list_Solicitudes_Tickets } = storeToRefs(ticketsStore);
+const { list_Solicitudes_Tickets } = storeToRefs(ticketsSolicitudesStore);
 const { list_Tipos_Solicitudes } = storeToRefs(tiposSolictudesStore);
 const solicitudes_Tipos = ref([]);
+
+//---------------------------------------------------------------
 
 onBeforeMount(() => {
   cargarData();
 });
 
+//---------------------------------------------------------------
+
 const cargarData = async () => {
   await tableroStore.load_Solicitudes_Area();
   await helpersStore.load_Personal_By_Area(9);
-  await ticketsStore.load_Solicitudes_Tickets();
+  await ticketsSolicitudesStore.load_Solicitudes_Tickets();
   await tableroStore.load_Seguimiento_Personal();
+  await tableroStore.load_Solicitudes_Trimestral();
   await tiposSolictudesStore.load_Tipos_Solicitudes();
   list_Tipos_Solicitudes.value.forEach((element) => {
     solicitudes_Tipos.value.push({

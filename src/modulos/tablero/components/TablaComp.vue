@@ -30,8 +30,12 @@ import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useTableroStore } from "src/stores/tablero-store";
 
+//---------------------------------------------------------------
+
 const tableroStore = useTableroStore();
 const { list_Tickets_By_Area } = storeToRefs(tableroStore);
+
+//---------------------------------------------------------------
 
 const columns = [
   {

@@ -78,9 +78,11 @@ export const useCancelacionesStore = defineStore("useCancelacionesStore", {
 
     //---------------------------------------------------------------
     //APROBAR SOLICITUD DE CANCELACIÓN
-    async aprobarSolicitudCancelacion(id) {
+    async aprobarSolicitudCancelacion(id, aprobado) {
       try {
-        const resp = await api.get(`/T_Solicitudes_Cancelacion/Aprobar/${id}`);
+        const resp = await api.get(
+          `/T_Solicitudes_Cancelacion/Aprobar/${id}?Aprobado=${aprobado}`
+        );
         if (resp.status == 200) {
           const { success, data } = resp.data;
           if (success === true) {

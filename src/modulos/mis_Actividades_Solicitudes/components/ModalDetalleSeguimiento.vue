@@ -1,6 +1,6 @@
 <template>
   <q-dialog
-    v-model="modal_Detalle_Seguimiento"
+    v-model="modal_Detalle_Seguimiento_Solicitudes"
     persistent
     transition-show="scale"
     transition-hide="scale"
@@ -95,14 +95,18 @@
               />
             </div>
             <div
-              v-if="seguimiento.estatus != 'Concluido' && !is_Visualizar"
+              v-if="
+                seguimiento.estatus != 'Concluido' &&
+                !is_Visualizar &&
+                evidencia.evidencia != null
+              "
               class="col-12 text-right"
             >
               <q-btn
                 @click="agregarEvidencia"
                 size="sm"
                 icon-right="add"
-                label="Agregar"
+                label="Agregar evidencia"
                 color="secondary"
                 class="q-ml-sm"
               />
@@ -138,7 +142,7 @@
 
 <script setup>
 import { storeToRefs } from "pinia";
-import { useTicketsStore } from "src/stores/tickets-store";
+import { useTicketsSolicitudesStore } from "src/stores/tickets-solicitudes-store";
 import { useEvidenciasStore } from "src/stores/evidencias-store";
 import { useQuasar, QSpinnerFacebook } from "quasar";
 import TablaEvidencias from "./TablaEvidencias.vue";
@@ -146,17 +150,18 @@ import TablaEvidencias from "./TablaEvidencias.vue";
 //-----------------------------------------------------------
 
 const $q = useQuasar();
-const ticketsStore = useTicketsStore();
+const ticketsSolicitudesStore = useTicketsSolicitudesStore();
 const evidenciasStore = useEvidenciasStore();
-const { seguimiento, modal_Detalle_Seguimiento, is_Visualizar } =
-  storeToRefs(ticketsStore);
+const { seguimiento, modal_Detalle_Seguimiento_Solicitudes, is_Visualizar } =
+  storeToRefs(ticketsSolicitudesStore);
 const { evidencia, list_Evidencias_Ticket_Detalle } =
   storeToRefs(evidenciasStore);
 
 const actualizarModal = (valor) => {
-  ticketsStore.initSeguimiento();
-  ticketsStore.actualizarVisualizar(valor);
-  ticketsStore.actualizarModalDetalleSeguimiento(valor);
+  list_Evidencias_Ticket_Detalle.value = [];
+  ticketsSolicitudesStore.initSeguimiento();
+  ticketsSolicitudesStore.actualizarVisualizar(valor);
+  ticketsSolicitudesStore.actualizarModalDetalleSeguimientoSolicitudes(valor);
 };
 
 const loading = () => {
@@ -224,9 +229,11 @@ const agregarEvidencia = async () => {
 const onSubmit = async () => {
   loading();
   let resp = null;
-  resp = await ticketsStore.update_Detalle_Seguimienti(seguimiento.value);
+  resp = await ticketsSolicitudesStore.update_Detalle_Seguimienti(
+    seguimiento.value
+  );
   if (resp.success) {
-    await ticketsStore.load_Seguimiento_By_Ticket(
+    await ticketsSolicitudesStore.load_Seguimiento_By_Ticket(
       seguimiento.value.solicitud_Ticket_Id
     );
     alertNotify("top-right", "positive", resp.data);

@@ -27,6 +27,8 @@ export const useInventarioStore = defineStore("useInventarioStore", {
     },
     inventario_Ticket: {
       id: null,
+      value: null,
+      label: null,
       no_Serie: null,
       descripcion: null,
       nombre_Corto: null,
@@ -168,11 +170,13 @@ export const useInventarioStore = defineStore("useInventarioStore", {
           const { success, data } = resp.data;
           if (success === true) {
             this.inventario_Ticket.id = data.id;
+            this.inventario_Ticket.value = data.inventario_Id;
             this.inventario_Ticket.solicitud_Ticket_Id =
               data.solicitud_Ticket_Id;
             this.inventario_Ticket.folio_Solicitud_Ticket =
               data.folio_Solicitud_Ticket;
             this.inventario_Ticket.no_Serie = data.no_Serie;
+            this.inventario_Ticket.label = `${data.clave}-${data.nombre_Corto}`;
             this.inventario_Ticket.descripcion = data.descripcion;
             this.inventario_Ticket.nombre_Corto = data.nombre_Corto;
             this.inventario_Ticket.inventario_Id = data.inventario_Id;
@@ -228,6 +232,32 @@ export const useInventarioStore = defineStore("useInventarioStore", {
           `/T_Inventario/${inventario.id}`,
           inventario
         );
+        if (resp.status == 200) {
+          const { success, data } = resp.data;
+          if (success === true) {
+            return { success, data };
+          } else {
+            return { success, data };
+          }
+        } else {
+          return {
+            success: false,
+            data: "Ocurrió un error, inténtelo de nuevo. Si el error persiste, contacte a soporte",
+          };
+        }
+      } catch (error) {
+        return {
+          success: false,
+          data: "Ocurrió un error, inténtelo de nuevo. Si el error persiste, contacte a soporte",
+        };
+      }
+    },
+
+    //---------------------------------------------------------------
+    //DELETE INVENTARIO BY TICKET
+    async delete_Inventario_By_Ticket(id) {
+      try {
+        const resp = await api.delete(`/T_Inventario/${id}`);
         if (resp.status == 200) {
           const { success, data } = resp.data;
           if (success === true) {
