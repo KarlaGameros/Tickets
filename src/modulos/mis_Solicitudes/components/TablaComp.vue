@@ -30,16 +30,6 @@
             <q-td v-for="col in props.cols" :key="col.name" :props="props">
               <div v-if="col.name === 'id'">
                 <q-btn
-                  v-if="props.row.estatus_Ticket == 'Concluido'"
-                  flat
-                  round
-                  color="purple-ieen"
-                  icon="print"
-                  @click="generarVale(col.value)"
-                >
-                  <q-tooltip>Generar vale</q-tooltip>
-                </q-btn>
-                <q-btn
                   v-if="props.row.estatus_Ticket != 'Pendiente'"
                   flat
                   round
@@ -58,16 +48,6 @@
                   @click="editarSolicitud(col.value)"
                 >
                   <q-tooltip>Editar solicitud</q-tooltip>
-                </q-btn>
-                <q-btn
-                  v-if="props.row.estatus_Ticket == 'Concluido'"
-                  flat
-                  round
-                  color="purple-ieen"
-                  icon="reviews"
-                  @click="agregarOpinion(props.row)"
-                >
-                  <q-tooltip>Agregar opiniones</q-tooltip>
                 </q-btn>
               </div>
               <label v-else-if="col.name == 'folio'" class="text-bold">{{

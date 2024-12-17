@@ -151,30 +151,6 @@
                 >
                   <q-tooltip>Concluir ticket</q-tooltip>
                 </q-btn>
-                <q-btn
-                  v-if="props.row.opiniones != null"
-                  flat
-                  round
-                  color="purple-ieen"
-                  icon="reviews"
-                  @click="verOpinion(props.row)"
-                >
-                  <q-tooltip>Ver opinion</q-tooltip>
-                </q-btn>
-                <q-btn
-                  v-if="props.row.estatus_Ticket == 'Concluido'"
-                  flat
-                  round
-                  color="purple-ieen"
-                  icon="attach_file"
-                  @click="subirArchivoFirmado(props.row)"
-                >
-                  <q-tooltip>{{
-                    props.row.archivo_Firmado_URL == null
-                      ? "Subir archivo firmado"
-                      : "Ver archivo firmado"
-                  }}</q-tooltip>
-                </q-btn>
               </div>
               <label v-else-if="col.name == 'folio'" class="text-bold">{{
                 col.value
@@ -360,17 +336,6 @@ const cargarColumnas = () => {
     default:
       break;
   }
-};
-
-const verOpinion = async (row) => {
-  Swal.fire({
-    title: "Opinión registrada",
-    text: `- ${row.opiniones}`,
-    showCloseButton: true,
-    showCancelButton: false,
-    showConfirmButton: false,
-    allowOutsideClick: true,
-  });
 };
 
 const aprobarSolicitud = async (id) => {

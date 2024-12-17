@@ -79,6 +79,7 @@ export const useTableroStore = defineStore("useTableroStore", {
         const resp = await api.get("/T_Solicitudes/SolicitudesTrimestrales");
         if (resp.status == 200) {
           const { success, data } = resp.data;
+          console.log("data", data);
           if (success == true) {
             if (data) {
               this.list_Solicitudes_Trimestral = data.map((item) => {

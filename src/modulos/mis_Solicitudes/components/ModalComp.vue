@@ -82,7 +82,7 @@
             </div>
             <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <q-input
-                :readonly="perfil_Personal"
+                :readonly="!area_Informatica || is_Visualizar"
                 color="purple-ieen"
                 label="Fecha"
                 hint="Fecha de la solicitud"
@@ -96,7 +96,7 @@
                       transition-hide="scale"
                     >
                       <q-date
-                        :disable="!area_Informatica"
+                        :disable="!area_Informatica || is_Visualizar"
                         color="purple-ieen"
                         v-model="currentDate"
                       >
@@ -124,6 +124,7 @@
                       transition-hide="scale"
                     >
                       <q-time
+                        :disable="is_Visualizar"
                         color="purple-ieen"
                         v-model="currentDate"
                         mask="YYYY-MM-DD HH:mm"
